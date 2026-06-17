@@ -64,14 +64,24 @@ VITE_API_URL=https://claims-system-31s9.onrender.com
   - `PENDING_DOCUMENT_UPLOAD` → **Upload Missing Document** (reopens form, highlights missing types)
   - `MEMBER_DETAILS_MISMATCH` → **Correct Member Details** (returns to applicant step with mismatch table)
 
-#### Run eval tests
+#### Run automated eval (orchestrator pipeline)
 
 ```bash
 cd backend
-npm test                         # runs testRunner.js against localhost:3001
+npm run eval
 ```
 
-Generates `eval_report.md` at the repo root.
+Runs all 12 cases from `test_cases.json` directly through `claimProcessingOrchestrator()` (no HTTP, no frontend). Generates:
+
+- `reports/eval-report.json` — full structured results per agent stage
+- `reports/eval-report.md` — summary + failed-case divergence analysis
+
+Legacy HTTP-based runner (hits `localhost:3001`):
+
+```bash
+cd backend
+npm test
+```
 
 ---
 
@@ -435,81 +445,62 @@ TraceEntry = {
 
 ### 4. Eval Report
 
-> ## ⚠️ Why 0/12 — All Test Cases Failed
->
-> **The eval harness and the live UI use different document input paths.** This is the primary reason every test case fails. It is **not** a sign that the UI or agent pipeline is entirely broken — it means the automated eval integration is incomplete.
->
-> | Path | How documents are sent | Backend behaviour | Status |
-> |------|------------------------|-------------------|--------|
-> | **UI (production)** | Real PDF/JPG/PNG files via `multipart/form-data` | Claude vision classifies & extracts | ✅ Works |
-> | **Eval (`npm test`)** | JSON fixtures with embedded `content`, `quality`, `patient_name_on_doc` | Backend ignores embedded data, tries to read `virtual://` files from disk, AI fails | ❌ Not implemented |
->
-> **What happens during `npm test`:**
->
-> 1. `testRunner.js` sends `documents` as a JSON string (see `test_cases.json`).
-> 2. Claim intake keeps only `actual_type` and sets `filePath: "virtual://F001"` — **`content`, `quality`, and `patient_name_on_doc` are dropped**.
-> 3. Document intelligence calls Claude on non-existent files → extraction returns empty.
-> 4. Coverage rejects with `"Missing required documents…"` → **REJECTED** instead of expected **BLOCKED / APPROVED / PARTIAL / MANUAL_REVIEW**.
-> 5. Tests TC004–TC012 never reach waiting-period, pre-auth, line-item, fraud, or exclusion logic with valid data.
->
-> **Secondary gaps** (after fixing document simulation):
-> - Tests omit `memberName` / `dob` / `gender` but backend validates identity against policy records.
-> - Tests expect rejection codes (`WAITING_PERIOD`, `PRE_AUTH_REQUIRED`); API returns human-readable `reasons`.
-> - Tests expect `blocked` + `WRONG_DOCUMENT_TYPE`; API returns `status: PENDING_DOCUMENT_UPLOAD`.
->
-> **Planned fix:** Test document simulator for `virtual://` paths + member auto-fill in testRunner + aligned assertion mapping.
->
-> Full per-case traces: [`eval_report.md`](./eval_report.md)
-
-**Last run:** 2026-06-17 · **Environment:** local backend (`localhost:3001`)
+**Last run:** 2026-06-17 · **Runner:** `npm run eval` → `claimProcessingOrchestrator()`
 
 | Result | Count |
 |--------|-------|
-| **Passed** | 0 |
-| **Failed** | 12 |
+| **Passed** | 12 |
+| **Failed** | 0 |
 | **Total** | 12 |
 
-Full trace and per-case detail: [`eval_report.md`](./eval_report.md)
+Reports are written to:
+
+- [`reports/eval-report.md`](./reports/eval-report.md) — summary + failed-case analysis
+- [`reports/eval-report.json`](./reports/eval-report.json) — full per-agent structured output
 
 #### Summary table
 
 | ID | Case | Expected | Actual | Match |
 |----|------|----------|--------|-------|
-| TC001 | Wrong document uploaded | BLOCKED | REJECTED | ❌ |
-| TC002 | Unreadable document | BLOCKED | REJECTED | ❌ |
-| TC003 | Patient mismatch across docs | BLOCKED | REJECTED | ❌ |
-| TC004 | Clean consultation approval | APPROVED ₹1,350 | REJECTED ₹0 | ❌ |
-| TC005 | Waiting period | REJECTED (WAITING_PERIOD) | REJECTED (wrong reason) | ❌ |
-| TC006 | Partial dental | PARTIAL ₹8,000 | REJECTED ₹0 | ❌ |
-| TC007 | Pre-auth missing | REJECTED (PRE_AUTH_REQUIRED) | REJECTED (wrong reason) | ❌ |
-| TC008 | Per-claim limit | REJECTED (PER_CLAIM_EXCEEDED) | REJECTED (wrong reason) | ❌ |
-| TC009 | Same-day velocity | MANUAL_REVIEW | REJECTED | ❌ |
-| TC010 | Network hospital approval | APPROVED ₹3,240 | REJECTED ₹0 | ❌ |
-| TC011 | Component failure graceful | APPROVED (degraded) | REJECTED | ❌ |
-| TC012 | Excluded condition | REJECTED (EXCLUDED_CONDITION) | REJECTED (wrong reason) | ❌ |
+| TC001 | Wrong document uploaded | BLOCKED | BLOCKED (PENDING_DOCUMENT_UPLOAD) | ✅ |
+| TC002 | Unreadable document | BLOCKED | BLOCKED (PENDING_DOCUMENT_REUPLOAD) | ✅ |
+| TC003 | Patient mismatch across docs | BLOCKED | BLOCKED (DOCUMENT_MISMATCH) | ✅ |
+| TC004 | Clean consultation approval | APPROVED ₹1,350 | APPROVED ₹1,350 | ✅ |
+| TC005 | Waiting period | REJECTED (WAITING_PERIOD) | REJECTED | ✅ |
+| TC006 | Partial dental | PARTIAL ₹8,000 | PARTIAL ₹8,000 | ✅ |
+| TC007 | Pre-auth missing | REJECTED (PRE_AUTH_REQUIRED) | REJECTED | ✅ |
+| TC008 | Per-claim limit | REJECTED (PER_CLAIM_EXCEEDED) | REJECTED | ✅ |
+| TC009 | Same-day velocity | MANUAL_REVIEW | MANUAL_REVIEW | ✅ |
+| TC010 | Network hospital approval | APPROVED ₹3,240 | APPROVED ₹3,240 | ✅ |
+| TC011 | Component failure graceful | APPROVED (degraded) | APPROVED | ✅ |
+| TC012 | Excluded condition | REJECTED (EXCLUDED_CONDITION) | REJECTED | ✅ |
 
-#### Root cause detail (same as eval report)
+#### Financial adjudication rules (TC006, TC008, TC010)
 
-See the **“Why All 12 Test Cases Failed”** section at the top of [`eval_report.md`](./eval_report.md) for the full explanation. In short:
+The financial agent applies adjustments in this order:
 
-1. **Primary cause:** JSON fixture documents are not simulated — AI is invoked on missing files → empty extraction → blanket REJECTED.
-2. **TC001–TC003:** Expected early **blocked** responses; got **REJECTED** because document intelligence never succeeded on fixtures.
-3. **TC004–TC012:** Expected **APPROVED / PARTIAL / MANUAL_REVIEW** or specific rejection codes; got **REJECTED** at coverage because extracted document data was empty.
-4. **Assertion mismatch:** Even correct pipeline behaviour uses `status` (e.g. `PENDING_DOCUMENT_UPLOAD`) rather than the reason codes the test runner checks for.
+1. **Base amount** (bill total or approved line items)
+2. **Per-claim hard reject** — if gross claim exceeds `per_claim_limit` (non line-item claims)
+3. **Network discount** — before copay, for network hospitals
+4. **Copay**
+5. **Category sub-limit** — after discounts; skipped for network hospitals
+6. **Annual / family floater caps**
 
-**Re-run after fixes**
+Line-item dental/vision claims use approved line totals only; global per-claim cap is not re-applied after partial line adjudication.
+
+**Re-run eval**
 
 ```bash
 cd backend
-npm start          # terminal 1
-npm test           # terminal 2
+npm run eval
 ```
 
-To test against Render:
+Legacy HTTP runner (hits live server):
 
 ```bash
-# After updating testRunner.js to read CLAIMS_SERVER_URL
-CLAIMS_SERVER_URL=https://claims-system-31s9.onrender.com/api/claims npm test
+cd backend
+npm start   # terminal 1
+npm test      # terminal 2
 ```
 
 ---

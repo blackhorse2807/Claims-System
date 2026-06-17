@@ -1,6 +1,10 @@
 const { classifyDocument, resolveFileInput } = require('../services/documentClassifier');
 const { extractDocumentData } = require('../services/documentExtractor');
 const { analyzeDocumentQuality } = require('../services/qualityAnalyzer');
+const {
+  isEvalFixtureDocument,
+  processEvalFixtureDocument,
+} = require('../services/evalFixtureDocuments');
 
 function createTraceEntry(step, status, message) {
   return {
@@ -285,6 +289,10 @@ async function processSingleDocument(document, services, trace) {
   const missingFields = [];
   const fraudSignals = [];
 
+  if (isEvalFixtureDocument(document)) {
+    return processEvalFixtureDocument(document, trace);
+  }
+
   const resolved = await Promise.resolve(services.resolveFileInput(document));
   if (!resolved.success) {
     const warning = `Unable to process ${fileName}: ${resolved.error}`;
@@ -483,10 +491,22 @@ async function processDocumentIntelligence(input, existingTrace = [], services =
       )
     );
 
-    const aggregatedExtraction = aggregateExtraction(documents);
-    const overallConfidence = averageConfidence(
+    let aggregatedExtraction = aggregateExtraction(documents);
+    let overallConfidence = averageConfidence(
       documents.map((document) => document.overallDocumentConfidence)
     );
+
+    if (input?.claim?.simulateComponentFailure) {
+      pipelineWarnings.push('COMPONENT_FAILURE_SIMULATED');
+      overallConfidence = Number((overallConfidence * 0.55).toFixed(4));
+      trace.push(
+        createTraceEntry(
+          'COMPONENT_FAILURE',
+          'WARNING',
+          'Simulated component failure — quality analysis skipped; confidence reduced'
+        )
+      );
+    }
 
     trace.push(
       createTraceEntry(

@@ -145,6 +145,26 @@ async function processClaim(
   let fullTrace = [];
   const warnings = [];
   let claimId = null;
+  const captureStages = options.captureStages === true;
+  const stageResults = captureStages
+    ? {
+        intakeResult: null,
+        memberValidationResult: null,
+        documentIntelligenceResult: null,
+        documentRequirementsResult: null,
+        coverageResult: null,
+        financialResult: null,
+        fraudResult: null,
+        decisionResult: null,
+      }
+    : null;
+
+  function attachStages(response) {
+    if (captureStages) {
+      response.stageResults = stageResults;
+    }
+    return response;
+  }
 
   try {
     const intakeResult = agents.processClaimIntake({
@@ -152,6 +172,10 @@ async function processClaim(
       files,
       jsonDocuments,
     });
+
+    if (captureStages) {
+      stageResults.intakeResult = intakeResult;
+    }
 
     fullTrace = [...(intakeResult.trace || [])];
 
@@ -161,13 +185,16 @@ async function processClaim(
         error: intakeResult.error || 'Claim intake failed',
         trace: fullTrace,
       });
-      return response;
+      return attachStages(response);
     }
 
     const claim = intakeResult.data;
     claimId = claim.claimId;
 
     const memberValidationResult = agents.validateMember(claim, fullTrace);
+    if (captureStages) {
+      stageResults.memberValidationResult = memberValidationResult;
+    }
     fullTrace = [...(memberValidationResult.trace || fullTrace)];
 
     if (!memberValidationResult.success) {
@@ -193,7 +220,7 @@ async function processClaim(
         response.persistencePath = persistClaimResult(claimId, response, options.claimsDataDir);
       }
 
-      return response;
+      return attachStages(response);
     }
 
     const member = memberValidationResult.data.member;
@@ -208,6 +235,10 @@ async function processClaim(
       fullTrace,
       options.documentIntelligenceServices || {}
     );
+
+    if (captureStages) {
+      stageResults.documentIntelligenceResult = documentIntelligenceResult;
+    }
 
     fullTrace = [...(documentIntelligenceResult.trace || fullTrace)];
     warnings.push(...(documentIntelligenceResult.warnings || []));
@@ -231,7 +262,7 @@ async function processClaim(
         response.persistencePath = persistClaimResult(claimId, response, options.claimsDataDir);
       }
 
-      return response;
+      return attachStages(response);
     }
 
     const documentRequirementsResult = evaluateDocumentRequirements(
@@ -242,6 +273,10 @@ async function processClaim(
       },
       fullTrace
     );
+
+    if (captureStages) {
+      stageResults.documentRequirementsResult = documentRequirementsResult;
+    }
 
     fullTrace = [...(documentRequirementsResult.trace || fullTrace)];
 
@@ -266,7 +301,7 @@ async function processClaim(
         response.persistencePath = persistClaimResult(claimId, response, options.claimsDataDir);
       }
 
-      return response;
+      return attachStages(response);
     }
 
     const coverageResult = agents.evaluateCoveragePolicy(
@@ -282,6 +317,9 @@ async function processClaim(
 
     fullTrace = [...(coverageResult.trace || fullTrace)];
     warnings.push(...(coverageResult.coverageWarnings || []));
+    if (captureStages) {
+      stageResults.coverageResult = coverageResult;
+    }
 
     const financialResult = agents.adjudicateFinancialClaim(
       {
@@ -301,6 +339,9 @@ async function processClaim(
     if (financialResult.warnings) {
       warnings.push(...financialResult.warnings);
     }
+    if (captureStages) {
+      stageResults.financialResult = financialResult;
+    }
 
     const fraudResult = agents.assessFraudRisk(
       {
@@ -319,6 +360,9 @@ async function processClaim(
 
     fullTrace = [...(fraudResult.trace || fullTrace)];
     warnings.push(...(fraudResult.warnings || []));
+    if (captureStages) {
+      stageResults.fraudResult = fraudResult;
+    }
 
     const decisionResult = agents.makeClaimDecision(
       {
@@ -334,6 +378,9 @@ async function processClaim(
 
     fullTrace = [...(decisionResult.trace || fullTrace)];
     warnings.push(...(decisionResult.warnings || []));
+    if (captureStages) {
+      stageResults.decisionResult = decisionResult;
+    }
 
     const response = buildFinalResponse({
       claimId,
@@ -350,7 +397,7 @@ async function processClaim(
       response.persistencePath = persistClaimResult(claimId, response, options.claimsDataDir);
     }
 
-    return response;
+    return attachStages(response);
   } catch (error) {
     const response = buildBlockedResponse({
       claimId,
@@ -364,7 +411,7 @@ async function processClaim(
       response.persistencePath = persistClaimResult(claimId, response, options.claimsDataDir);
     }
 
-    return response;
+    return attachStages(response);
   }
 }
 

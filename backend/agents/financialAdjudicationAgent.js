@@ -446,10 +446,92 @@ function adjudicateFinancialClaim(input, existingTrace = [], options = {}) {
       ? roundAmount(base.claimedTotal ?? base.amount)
       : base.amount;
 
+    const perClaimLimit = Number(coverageLimits.per_claim_limit);
+    const hospitalName = getHospitalName(claim, documentIntelligenceResult);
+    const isNetwork = isNetworkHospital(hospitalName, policy);
+
+    // Hard reject when gross claim exceeds per-claim limit (non line-item adjudication).
+    if (
+      !useLineItemAdjudication &&
+      Number.isFinite(perClaimLimit) &&
+      claimedAmount > perClaimLimit
+    ) {
+      const message = `Claimed amount ₹${claimedAmount} exceeds per-claim limit of ₹${perClaimLimit}`;
+      adjustments.push({
+        type: 'PER_CLAIM_EXCEEDED',
+        description: message,
+        amountReduced: claimedAmount,
+      });
+      trace.push(createTraceEntry('PER_CLAIM_LIMIT', 'FAIL', message));
+
+      return {
+        claimedAmount,
+        eligibleAmount: 0,
+        approvedAmount: 0,
+        patientPayable: claimedAmount,
+        perClaimLimitExceeded: true,
+        lineItemDecisions,
+        adjustments,
+        trace,
+        claim,
+        member: input?.member || null,
+        coverageResult,
+        documentIntelligenceResult,
+        hospitalName,
+        isNetworkHospital: isNetwork,
+      };
+    }
+
     let runningAmount = base.amount;
 
+    const networkDiscountPercent = Number(categoryRules.network_discount_percent);
+    if (isNetwork && Number.isFinite(networkDiscountPercent) && networkDiscountPercent > 0) {
+      runningAmount = applyPercentageReduction({
+        runningAmount,
+        percent: networkDiscountPercent,
+        type: 'NETWORK_DISCOUNT',
+        description: `${networkDiscountPercent}% network discount applied for ${hospitalName}`,
+        adjustments,
+        trace,
+      });
+    } else {
+      trace.push(
+        createTraceEntry(
+          'NETWORK_DISCOUNT',
+          'PASS',
+          hospitalName
+            ? `No network discount applied for ${hospitalName}`
+            : 'No network hospital identified — network discount skipped'
+        )
+      );
+    }
+
+    const copayPercent = getCopayPercent(claim, categoryRules);
+    let patientCopay = 0;
+
+    if (Number.isFinite(copayPercent) && copayPercent > 0 && runningAmount > 0) {
+      patientCopay = roundAmount(runningAmount * (copayPercent / 100));
+      runningAmount = roundAmount(runningAmount - patientCopay);
+
+      adjustments.push({
+        type: 'COPAY',
+        description: `${copayPercent}% copay applied`,
+        amountReduced: patientCopay,
+      });
+      trace.push(
+        createTraceEntry(
+          'COPAY',
+          'PASS',
+          `${copayPercent}% copay of ₹${patientCopay} applied`
+        )
+      );
+    } else {
+      trace.push(createTraceEntry('COPAY', 'PASS', 'No copay applied'));
+    }
+
+    // Category sub-limit applies after network discount and copay; waived at network hospitals.
     const subLimit = Number(categoryRules.sub_limit);
-    if (Number.isFinite(subLimit)) {
+    if (!isNetwork && Number.isFinite(subLimit)) {
       runningAmount = applyCap({
         runningAmount,
         limit: subLimit,
@@ -458,18 +540,14 @@ function adjudicateFinancialClaim(input, existingTrace = [], options = {}) {
         adjustments,
         trace,
       });
-    }
-
-    const perClaimLimit = Number(coverageLimits.per_claim_limit);
-    if (Number.isFinite(perClaimLimit)) {
-      runningAmount = applyCap({
-        runningAmount,
-        limit: perClaimLimit,
-        type: 'PER_CLAIM_LIMIT',
-        description: `Per-claim limit of ₹${perClaimLimit} applied`,
-        adjustments,
-        trace,
-      });
+    } else if (isNetwork && Number.isFinite(subLimit)) {
+      trace.push(
+        createTraceEntry(
+          'SUB_LIMIT',
+          'PASS',
+          `Category sub-limit skipped for network hospital ${hospitalName}`
+        )
+      );
     }
 
     const annualLimit = Number(coverageLimits.annual_opd_limit);
@@ -521,56 +599,19 @@ function adjudicateFinancialClaim(input, existingTrace = [], options = {}) {
       }
     }
 
-    const eligibleAmount = roundAmount(runningAmount);
-
-    const hospitalName = getHospitalName(claim, documentIntelligenceResult);
-    const networkDiscountPercent = Number(categoryRules.network_discount_percent);
-    const isNetwork = isNetworkHospital(hospitalName, policy);
-
-    if (isNetwork && Number.isFinite(networkDiscountPercent) && networkDiscountPercent > 0) {
-      runningAmount = applyPercentageReduction({
+    // Line-item claims use category sub-limit only; global per-claim cap is not re-applied post-adjudication.
+    if (useLineItemAdjudication && Number.isFinite(subLimit) && runningAmount > subLimit) {
+      runningAmount = applyCap({
         runningAmount,
-        percent: networkDiscountPercent,
-        type: 'NETWORK_DISCOUNT',
-        description: `${networkDiscountPercent}% network discount applied for ${hospitalName}`,
+        limit: subLimit,
+        type: 'SUB_LIMIT',
+        description: `${claimType} sub-limit of ₹${subLimit} applied`,
         adjustments,
         trace,
       });
-    } else {
-      trace.push(
-        createTraceEntry(
-          'NETWORK_DISCOUNT',
-          'PASS',
-          hospitalName
-            ? `No network discount applied for ${hospitalName}`
-            : 'No network hospital identified — network discount skipped'
-        )
-      );
     }
 
-    const copayPercent = getCopayPercent(claim, categoryRules);
-    let patientCopay = 0;
-
-    if (Number.isFinite(copayPercent) && copayPercent > 0 && runningAmount > 0) {
-      patientCopay = roundAmount(runningAmount * (copayPercent / 100));
-      runningAmount = roundAmount(runningAmount - patientCopay);
-
-      adjustments.push({
-        type: 'COPAY',
-        description: `${copayPercent}% copay applied`,
-        amountReduced: patientCopay,
-      });
-      trace.push(
-        createTraceEntry(
-          'COPAY',
-          'PASS',
-          `${copayPercent}% copay of ₹${patientCopay} applied`
-        )
-      );
-    } else {
-      trace.push(createTraceEntry('COPAY', 'PASS', 'No copay applied'));
-    }
-
+    const eligibleAmount = roundAmount(runningAmount);
     let approvedAmount = roundAmount(runningAmount);
 
     if (coverageResult && coverageResult.eligible === false) {

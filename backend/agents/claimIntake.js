@@ -137,6 +137,12 @@ function buildUploadedDocumentsFromJson(documents = []) {
     filePath: `virtual://${trimString(doc.file_id) || index}`,
     mimeType: trimString(doc.mime_type) || 'application/octet-stream',
     documentType: trimString(doc.actual_type) || 'UNKNOWN',
+    fixture: {
+      actual_type: trimString(doc.actual_type) || 'UNKNOWN',
+      content: doc.content || null,
+      quality: doc.quality || 'GOOD',
+      patient_name_on_doc: doc.patient_name_on_doc || null,
+    },
   }));
 }
 
@@ -252,6 +258,8 @@ function processClaimIntake({ body = {}, files = [], jsonDocuments = [] }) {
       uploadedDocuments,
       createdAt: new Date().toISOString(),
       metadata: collectMetadata(body),
+      simulateComponentFailure:
+        body.simulate_component_failure === true || body.simulate_component_failure === 'true',
     };
 
     if (!normalizedClaim.treatmentDate) {

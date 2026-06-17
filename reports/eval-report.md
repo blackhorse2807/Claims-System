@@ -1,17 +1,12 @@
-# Eval Report — Health Insurance Claims Pipeline
+# Claims Pipeline — Automated Eval Report
 
-> **Canonical report:** [`reports/eval-report.md`](./reports/eval-report.md) · [`reports/eval-report.json`](./reports/eval-report.json)
-
-**Generated:** 2026-06-17T23:00:21.136Z  
-**Runner:** `scripts/runAllEvaluations.js` → `claimProcessingOrchestrator()`  
-**Total Tests:** 12  
-**Passed:** 12 | **Failed:** 0
-
----
+**Generated:** 2026-06-17T23:00:21.136Z
+**Runner:** `scripts/runAllEvaluations.js` → `claimProcessingOrchestrator()`
 
 ## Summary
 
-All 12 test cases from `test_cases.json` pass when run through the production orchestrator pipeline with eval fixture documents.
+- **Passed:** 12/12
+- **Failed:** 0/12
 
 | Test ID | Case | Expected | Actual | Result |
 |---------|------|----------|--------|--------|
@@ -27,20 +22,3 @@ All 12 test cases from `test_cases.json` pass when run through the production or
 | TC010 | Network Hospital — Discount Applied | APPROVED | APPROVED | ✅ PASS |
 | TC011 | Component Failure — Graceful Degradation | APPROVED | APPROVED | ✅ PASS |
 | TC012 | Excluded Treatment | REJECTED | REJECTED | ✅ PASS |
-
----
-
-## How to re-run
-
-```bash
-cd backend
-npm run eval
-```
-
----
-
-## Note on legacy `eval_report.md` detail sections below
-
-The detailed per-case traces below are from an earlier HTTP-based run (`npm test` against `localhost:3001`) before eval fixture support and financial adjudication fixes. For current structured results with per-agent stage capture, use **`reports/eval-report.json`**.
-
----

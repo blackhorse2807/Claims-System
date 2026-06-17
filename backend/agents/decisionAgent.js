@@ -122,8 +122,12 @@ function buildReasons({
   }
 
   if (decision === 'REJECTED' && coverageResult?.eligible !== false) {
+    if (financialResult?.perClaimLimitExceeded) {
+      reasons.push('PER_CLAIM_EXCEEDED');
+    }
+
     const approvedAmount = getApprovedAmount(financialResult);
-    if (approvedAmount <= 0) {
+    if (approvedAmount <= 0 && !financialResult?.perClaimLimitExceeded) {
       reasons.push('No payable amount remained after financial adjudication');
     }
   }
@@ -155,6 +159,10 @@ function buildWarnings(coverageResult, fraudResult, financialResult) {
   ]);
 }
 
+function hasRejectedLineItems(financialResult) {
+  return (financialResult?.lineItemDecisions || []).some((item) => item.decision === 'REJECTED');
+}
+
 function determineDecision({
   coverageResult,
   financialResult,
@@ -163,6 +171,10 @@ function determineDecision({
   approvedAmount,
 }) {
   if (coverageResult?.eligible === false) {
+    return 'REJECTED';
+  }
+
+  if (financialResult?.perClaimLimitExceeded) {
     return 'REJECTED';
   }
 
@@ -175,6 +187,10 @@ function determineDecision({
   }
 
   if (approvedAmount < claimedAmount) {
+    // Copay/discount reductions are still a full approval when no line items were rejected.
+    if (!hasRejectedLineItems(financialResult)) {
+      return 'APPROVED';
+    }
     return 'PARTIAL_APPROVED';
   }
 
