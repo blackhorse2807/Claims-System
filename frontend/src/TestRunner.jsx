@@ -3,6 +3,7 @@
 // Useful for the demo — shows the eval report visually
 
 import { useState } from 'react';
+import { apiUrl } from './config';
 
 export default function TestRunner({ onBack }) {
   const [results, setResults] = useState([]);
@@ -401,7 +402,7 @@ export default function TestRunner({ onBack }) {
     });
     formData.append('policy_id', 'PLUM_GHI_2024');
 
-    const response = await fetch('/api/claims', {
+    const response = await fetch(apiUrl('/api/claims'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formData.toString(),

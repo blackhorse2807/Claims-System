@@ -5,6 +5,7 @@ import { useState } from 'react';
 import ClaimForm from './ClaimForm';
 import DecisionView from './DecisionView';
 import TestRunner from './TestRunner';
+import { apiUrl } from './config';
 
 export default function App() {
   const [view, setView] = useState('form');
@@ -17,7 +18,7 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await fetch('/api/claims', {
+      const response = await fetch(apiUrl('/api/claims'), {
         method: 'POST',
         body: formData,
       });
@@ -26,7 +27,7 @@ export default function App() {
       setResult(data);
       setView('result');
     } catch (err) {
-      setError('Could not connect to the server. Is it running on port 3001?');
+      setError('Could not connect to the claims server. Please try again in a moment.');
     } finally {
       setLoading(false);
     }
