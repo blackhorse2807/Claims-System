@@ -27,18 +27,56 @@ export default function DecisionView({ result, onReset }) {
   // If claim was blocked at document verification stage
   if (result.blocked) {
     return (
-      <div
-        style={{
-          background: '#fff1f2',
-          border: '1px solid #fca5a5',
-          borderRadius: '12px',
-          padding: '24px',
-        }}
-      >
-        <h2 style={{ color: '#991b1b', marginTop: 0 }}>Document Problem Detected</h2>
-        <p style={{ color: '#991b1b', fontSize: '15px' }}>{result.message}</p>
-        <button onClick={onReset} style={resetButtonStyle}>
-          Submit Again
+      <div>
+        <div
+          style={{
+            background: '#fff7ed',
+            border: '1px solid #fed7aa',
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <span style={{ fontSize: '24px' }}>⚠️</span>
+            <div>
+              <h2 style={{ color: '#9a3412', marginTop: 0, fontSize: '16px' }}>
+                Document Issue — Action Required
+              </h2>
+              <p style={{ color: '#7c2d12', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
+                {result.message}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div
+          style={{
+            background: '#f0fdf4',
+            border: '1px solid #86efac',
+            borderRadius: '8px',
+            padding: '14px 16px',
+            fontSize: '13px',
+            color: '#166534',
+            marginBottom: '16px',
+          }}
+        >
+          <strong>What to do:</strong> Click &quot;Try Again&quot; below, use the &quot;+ Add
+          Document&quot; button to upload the missing document, then resubmit.
+        </div>
+        <button
+          onClick={onReset}
+          style={{
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            padding: '10px 24px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+          }}
+        >
+          Try Again →
         </button>
       </div>
     );

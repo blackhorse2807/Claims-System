@@ -50,8 +50,38 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '22px', marginBottom: '4px' }}>Health Insurance Claims Portal</h1>
-      <p style={{ color: '#666', marginBottom: '16px' }}>Plum — Group Health Insurance Claims Processing</p>
+      <div
+        style={{
+          borderBottom: '1px solid #e5e7eb',
+          paddingBottom: '20px',
+          marginBottom: '28px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: '20px', margin: 0, fontWeight: '600' }}>
+            Claims Processing Portal
+          </h1>
+          <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: '13px' }}>
+            Plum Group Health Insurance — PLUM_GHI_2024
+          </p>
+        </div>
+        <div
+          style={{
+            background: '#f0fdf4',
+            border: '1px solid #86efac',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            fontSize: '12px',
+            color: '#166534',
+            fontWeight: '500',
+          }}
+        >
+          ● Live
+        </div>
+      </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
         <button onClick={() => setView('form')} style={navButtonStyle(view === 'form')}>
@@ -78,8 +108,25 @@ export default function App() {
       )}
 
       {loading && (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          Processing your claim... This may take a few seconds.
+        <div style={{ textAlign: 'center', padding: '60px 40px' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              border: '3px solid #e5e7eb',
+              borderTop: '3px solid #2563eb',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              margin: '0 auto 16px',
+            }}
+          />
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+            Processing your claim...
+          </p>
+          <p style={{ color: '#9ca3af', fontSize: '12px', margin: '4px 0 0' }}>
+            Verifying documents and checking policy rules
+          </p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
 

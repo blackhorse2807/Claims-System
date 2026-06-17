@@ -37,6 +37,18 @@ const DOC_TYPES = [
   'DIAGNOSTIC_REPORT',
 ];
 
+function getRequiredDocsHint(category) {
+  const hints = {
+    CONSULTATION: 'Prescription + Hospital Bill',
+    DIAGNOSTIC: 'Prescription + Lab Report + Hospital Bill',
+    PHARMACY: 'Prescription + Pharmacy Bill',
+    DENTAL: 'Hospital Bill (Prescription optional)',
+    VISION: 'Prescription + Hospital Bill',
+    ALTERNATIVE_MEDICINE: 'Prescription + Hospital Bill',
+  };
+  return hints[category] || 'Check policy for required documents';
+}
+
 export default function ClaimForm({ onSubmit }) {
   const [memberId, setMemberId] = useState('EMP001');
   const [category, setCategory] = useState('CONSULTATION');
@@ -44,27 +56,33 @@ export default function ClaimForm({ onSubmit }) {
   const [claimedAmount, setClaimedAmount] = useState('1500');
   const [hospitalName, setHospitalName] = useState('');
   const [ytdAmount, setYtdAmount] = useState('0');
-  const [files, setFiles] = useState([]);
-  const [docTypes, setDocTypes] = useState([]);
+  const [documents, setDocuments] = useState([]);
 
-  // When user selects files, set up a doc type entry for each
-  function handleFileChange(event) {
-    const selectedFiles = Array.from(event.target.files);
-    setFiles(selectedFiles);
-    setDocTypes(selectedFiles.map(() => 'PRESCRIPTION'));
+  function addDocumentSlot() {
+    setDocuments((prev) => [...prev, { file: null, docType: 'PRESCRIPTION' }]);
   }
 
-  // Update the doc type for a specific file
-  function handleDocTypeChange(index, value) {
-    const updated = [...docTypes];
-    updated[index] = value;
-    setDocTypes(updated);
+  function handleFileChange(index, file) {
+    setDocuments((prev) => prev.map((doc, i) => (i === index ? { ...doc, file } : doc)));
+  }
+
+  function handleDocTypeChange(index, docType) {
+    setDocuments((prev) => prev.map((doc, i) => (i === index ? { ...doc, docType } : doc)));
+  }
+
+  function removeDocument(index) {
+    setDocuments((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleSubmit(event) {
     event.preventDefault();
 
-    // Build FormData — this can hold both text fields and files
+    const uploadedDocs = documents.filter((doc) => doc.file !== null);
+    if (uploadedDocs.length === 0) {
+      alert('Please upload at least one document.');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('member_id', memberId);
     formData.append('policy_id', 'PLUM_GHI_2024');
@@ -75,10 +93,9 @@ export default function ClaimForm({ onSubmit }) {
     formData.append('ytd_claims_amount', ytdAmount);
     formData.append('claims_history', '[]');
 
-    // Append each file and its type
-    files.forEach((file, index) => {
-      formData.append('files', file);
-      formData.append(`doc_type_${index}`, docTypes[index]);
+    uploadedDocs.forEach((doc, index) => {
+      formData.append('files', doc.file);
+      formData.append(`doc_type_${index}`, doc.docType);
     });
 
     onSubmit(formData);
@@ -108,10 +125,11 @@ export default function ClaimForm({ onSubmit }) {
     <form onSubmit={handleSubmit}>
       <div
         style={{
-          background: '#f9f9f9',
-          border: '1px solid #eee',
+          background: 'white',
+          border: '1px solid #e5e7eb',
           borderRadius: '12px',
-          padding: '24px',
+          padding: '28px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
         }}
       >
         <h2 style={{ fontSize: '18px', marginBottom: '24px', marginTop: 0 }}>Submit a Claim</h2>
@@ -203,69 +221,208 @@ export default function ClaimForm({ onSubmit }) {
           </div>
         </div>
 
-        <div style={fieldStyle}>
-          <label style={labelStyle}>Upload Documents</label>
-          <input
-            type="file"
-            multiple
-            accept="image/*,.pdf"
-            onChange={handleFileChange}
-            style={{ fontSize: '14px' }}
-          />
-          <p style={{ fontSize: '12px', color: '#888', marginTop: '6px' }}>
-            Accept images (JPG, PNG) or PDF. Upload prescription, bill, lab reports etc.
-          </p>
-        </div>
+        {/* Document upload section */}
+        <div style={{ marginBottom: '20px' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '10px',
+            }}
+          >
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Documents</label>
+            <button
+              type="button"
+              onClick={addDocumentSlot}
+              style={{
+                background: '#eff6ff',
+                color: '#2563eb',
+                border: '1px solid #bfdbfe',
+                padding: '5px 12px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                fontWeight: '500',
+              }}
+            >
+              + Add Document
+            </button>
+          </div>
 
-        {files.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <label style={labelStyle}>Document Types</label>
-            {files.map((file, index) => (
-              <div
-                key={index}
+          <div
+            style={{
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              marginBottom: '12px',
+              fontSize: '12px',
+              color: '#0369a1',
+            }}
+          >
+            <strong>Required for {category}:</strong> {getRequiredDocsHint(category)}
+          </div>
+
+          {documents.length === 0 && (
+            <div
+              style={{
+                border: '2px dashed #d1d5db',
+                borderRadius: '8px',
+                padding: '24px',
+                textAlign: 'center',
+                color: '#9ca3af',
+                fontSize: '14px',
+              }}
+            >
+              Click &quot;+ Add Document&quot; to upload your first document
+            </div>
+          )}
+
+          {documents.map((doc, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '8px',
+                background: doc.file ? '#f0fdf4' : '#fafafa',
+                border: `1px solid ${doc.file ? '#86efac' : '#e5e7eb'}`,
+                borderRadius: '8px',
+                padding: '10px 12px',
+              }}
+            >
+              <select
+                value={doc.docType}
+                onChange={(event) => handleDocTypeChange(index, event.target.value)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  marginBottom: '8px',
+                  padding: '6px 8px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  background: 'white',
+                  flexShrink: 0,
                 }}
               >
-                <span style={{ fontSize: '13px', color: '#555', flex: 1 }}>{file.name}</span>
-                <select
-                  value={docTypes[index]}
-                  onChange={(event) => handleDocTypeChange(index, event.target.value)}
-                  style={{
-                    padding: '6px 10px',
-                    border: '1px solid #ddd',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                  }}
-                >
-                  {DOC_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                {DOC_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {doc.file ? (
+                  <div
+                    style={{
+                      fontSize: '13px',
+                      color: '#166534',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <span>✓</span>
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {doc.file.name}
+                    </span>
+                  </div>
+                ) : (
+                  <label style={{ cursor: 'pointer', fontSize: '13px', color: '#6b7280' }}>
+                    <span
+                      style={{
+                        background: 'white',
+                        border: '1px solid #d1d5db',
+                        padding: '4px 10px',
+                        borderRadius: '5px',
+                        marginRight: '8px',
+                      }}
+                    >
+                      Choose file
+                    </span>
+                    Click to select a file
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      style={{ display: 'none' }}
+                      onChange={(event) => {
+                        if (event.target.files[0]) {
+                          handleFileChange(index, event.target.files[0]);
+                        }
+                      }}
+                    />
+                  </label>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+
+              {doc.file && (
+                <label style={{ cursor: 'pointer', flexShrink: 0 }}>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: '#2563eb',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Change
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    style={{ display: 'none' }}
+                    onChange={(event) => {
+                      if (event.target.files[0]) {
+                        handleFileChange(index, event.target.files[0]);
+                      }
+                    }}
+                  />
+                </label>
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeDocument(index)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  lineHeight: 1,
+                  padding: '0 2px',
+                  flexShrink: 0,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
 
         <button
           type="submit"
           style={{
+            width: '100%',
             background: '#2563eb',
             color: 'white',
             border: 'none',
-            padding: '12px 32px',
+            padding: '14px',
             borderRadius: '8px',
             fontSize: '15px',
             cursor: 'pointer',
-            fontWeight: '500',
+            fontWeight: '600',
+            marginTop: '8px',
+            letterSpacing: '0.01em',
           }}
         >
-          Submit Claim
+          Submit Claim →
         </button>
       </div>
     </form>
