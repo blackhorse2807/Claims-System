@@ -48,9 +48,166 @@ function createValidationResult() {
   return {
     memberFound: false,
     relationshipValid: false,
+    identityValid: false,
     treatmentDateValid: false,
     submissionDeadlineValid: false,
     policyActive: false,
+  };
+}
+
+function normalizeMemberName(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function normalizeGender(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (normalized === 'm' || normalized === 'male') {
+    return 'M';
+  }
+
+  if (normalized === 'f' || normalized === 'female') {
+    return 'F';
+  }
+
+  return normalized.toUpperCase();
+}
+
+function normalizeDob(value) {
+  if (!value) {
+    return '';
+  }
+
+  const trimmed = String(value).trim();
+  const parsed = parseIsoDate(trimmed);
+
+  if (!parsed) {
+    return trimmed;
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getSubmittedMemberFields(claim) {
+  const metadata = claim?.metadata || {};
+
+  return {
+    memberName: metadata.memberName || claim?.member_name || claim?.memberName || '',
+    dob: metadata.dob || claim?.date_of_birth || claim?.dob || '',
+    gender: metadata.gender || claim?.gender || '',
+  };
+}
+
+const IDENTITY_FIELD_MESSAGES = {
+  memberName: 'Submitted member name does not match policy records.',
+  dob: 'Submitted date of birth does not match policy records.',
+  gender: 'Submitted gender does not match policy records.',
+};
+
+/**
+ * Compare submitted applicant details against the policy member record.
+ * @param {import('../types/claimIntake').NormalizedClaim} claim
+ * @param {object} member
+ * @param {import('../types/claimIntake').TraceEntry[]} trace
+ */
+function validateMemberIdentity(claim, member, trace) {
+  const submitted = getSubmittedMemberFields(claim);
+  const mismatches = [];
+
+  const expectedName = normalizeMemberName(member.name);
+  const submittedName = normalizeMemberName(submitted.memberName);
+
+  if (!submittedName || submittedName !== expectedName) {
+    mismatches.push({
+      field: 'memberName',
+      submitted: submitted.memberName || '',
+      expected: member.name || '',
+    });
+    trace.push(
+      createTraceEntry(
+        'MEMBER_NAME_CHECK',
+        'FAIL',
+        `Submitted name "${submitted.memberName || 'missing'}" does not match policy record "${member.name}"`
+      )
+    );
+  } else {
+    trace.push(
+      createTraceEntry(
+        'MEMBER_NAME_CHECK',
+        'PASS',
+        `Member name matches policy record (${member.name})`
+      )
+    );
+  }
+
+  const expectedDob = normalizeDob(member.dateOfBirth);
+  const submittedDob = normalizeDob(submitted.dob);
+
+  if (!submittedDob || submittedDob !== expectedDob) {
+    mismatches.push({
+      field: 'dob',
+      submitted: submitted.dob || '',
+      expected: member.dateOfBirth || '',
+    });
+    trace.push(
+      createTraceEntry(
+        'DOB_CHECK',
+        'FAIL',
+        `Submitted DOB "${submitted.dob || 'missing'}" does not match policy record "${member.dateOfBirth}"`
+      )
+    );
+  } else {
+    trace.push(
+      createTraceEntry(
+        'DOB_CHECK',
+        'PASS',
+        `Date of birth matches policy record (${member.dateOfBirth})`
+      )
+    );
+  }
+
+  const expectedGender = normalizeGender(member.gender);
+  const submittedGender = normalizeGender(submitted.gender);
+
+  if (!submittedGender || submittedGender !== expectedGender) {
+    mismatches.push({
+      field: 'gender',
+      submitted: submitted.gender || '',
+      expected: member.gender || '',
+    });
+    trace.push(
+      createTraceEntry(
+        'GENDER_CHECK',
+        'FAIL',
+        `Submitted gender "${submitted.gender || 'missing'}" does not match policy record "${member.gender}"`
+      )
+    );
+  } else {
+    trace.push(
+      createTraceEntry(
+        'GENDER_CHECK',
+        'PASS',
+        `Gender matches policy record (${member.gender})`
+      )
+    );
+  }
+
+  if (mismatches.length === 0) {
+    return { passed: true, mismatches: [], reasons: [] };
+  }
+
+  const reasons = mismatches.map((mismatch) => IDENTITY_FIELD_MESSAGES[mismatch.field]);
+
+  return {
+    passed: false,
+    mismatches,
+    reasons,
   };
 }
 
@@ -130,6 +287,28 @@ function validateMember(normalizedClaim, existingTrace = [], service = policySer
         `Relationship ${member.relationship} verified`
       )
     );
+
+    const identityCheck = validateMemberIdentity(normalizedClaim, member, trace);
+
+    if (!identityCheck.passed) {
+      return {
+        success: false,
+        blocked: true,
+        identityMismatch: true,
+        status: 'MEMBER_DETAILS_MISMATCH',
+        error: identityCheck.reasons[0] || 'Submitted member details do not match policy records.',
+        reasons: identityCheck.reasons,
+        mismatches: identityCheck.mismatches,
+        trace,
+        data: {
+          claim: normalizedClaim,
+          member,
+          validation,
+        },
+      };
+    }
+
+    validation.identityValid = true;
 
     if (member.joinDate) {
       const treatmentDate = parseIsoDate(normalizedClaim.treatmentDate);
@@ -311,6 +490,10 @@ function validateMember(normalizedClaim, existingTrace = [], service = policySer
 
 module.exports = {
   validateMember,
+  validateMemberIdentity,
+  normalizeMemberName,
+  normalizeGender,
+  normalizeDob,
   createTraceEntry,
   daysBetween,
 };

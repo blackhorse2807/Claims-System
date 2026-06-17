@@ -171,13 +171,21 @@ async function processClaim(
     fullTrace = [...(memberValidationResult.trace || fullTrace)];
 
     if (!memberValidationResult.success) {
+      const isIdentityMismatch = memberValidationResult.identityMismatch === true;
       const response = buildBlockedResponse({
         claimId,
-        stage: 'MEMBER_VALIDATION',
+        stage: isIdentityMismatch ? 'MEMBER_IDENTITY_VALIDATION' : 'MEMBER_VALIDATION',
         error: memberValidationResult.error || 'Member validation failed',
         trace: fullTrace,
         extra: {
           validation: memberValidationResult.data?.validation || null,
+          ...(isIdentityMismatch
+            ? {
+                status: 'MEMBER_DETAILS_MISMATCH',
+                mismatches: memberValidationResult.mismatches || [],
+                reasons: memberValidationResult.reasons || [],
+              }
+            : {}),
         },
       });
 

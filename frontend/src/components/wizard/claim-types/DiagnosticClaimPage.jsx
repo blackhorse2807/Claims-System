@@ -14,11 +14,25 @@ import DocumentUploadTable from './shared/DocumentUploadTable';
 import InfoCard from './shared/InfoCard';
 import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 
-export default function DiagnosticClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [hospitalName, setHospitalName] = useState('');
-  const [diagnosticAmount, setDiagnosticAmount] = useState('');
-  const [diagnosticTestType, setDiagnosticTestType] = useState('');
-  const [preAuthorizationId, setPreAuthorizationId] = useState('');
+export default function DiagnosticClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [hospitalName, setHospitalName] = useState(initialClaimDetails?.hospitalName || '');
+  const [diagnosticAmount, setDiagnosticAmount] = useState(
+    initialClaimDetails?.diagnosticAmount != null
+      ? String(initialClaimDetails.diagnosticAmount)
+      : ''
+  );
+  const [diagnosticTestType, setDiagnosticTestType] = useState(
+    initialClaimDetails?.diagnosticTestType || ''
+  );
+  const [preAuthorizationId, setPreAuthorizationId] = useState(
+    initialClaimDetails?.preAuthorizationId || ''
+  );
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -230,6 +244,7 @@ export default function DiagnosticClaimPage({ applicantSummary, onBack, onContin
           showErrors={showErrors}
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>

@@ -1,4 +1,5 @@
 import { formatFileSize } from '../../../../utils/documentUpload';
+import { formatDocLabel } from '../../../../data/policyData';
 
 export default function DocumentUploadTable({
   specs,
@@ -8,8 +9,10 @@ export default function DocumentUploadTable({
   fileInputRefs,
   onFileSelect,
   requiredIds = null,
+  highlightMissingIds = [],
 }) {
   const requiredSet = requiredIds ? new Set(requiredIds) : new Set(specs.map((s) => s.id));
+  const missingSet = new Set(highlightMissingIds);
 
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -28,14 +31,29 @@ export default function DocumentUploadTable({
             const file = uploads[spec.id];
             const docError = showErrors ? errors[`doc_${spec.id}`] : null;
             const isRequired = requiredSet.has(spec.id);
+            const isMissingHighlight = missingSet.has(spec.id) && !file;
 
             return (
-              <tr key={spec.id} className={docError ? 'bg-red-50/40' : 'bg-white'}>
+              <tr
+                key={spec.id}
+                className={
+                  docError
+                    ? 'bg-red-50/40'
+                    : isMissingHighlight
+                      ? 'bg-amber-50 ring-1 ring-inset ring-amber-300'
+                      : 'bg-white'
+                }
+              >
                 <td className="px-4 py-4 align-top">
                   <p className="font-medium text-slate-900">
                     {spec.label}
                     {isRequired ? <span className="text-red-500"> *</span> : null}
                   </p>
+                  {isMissingHighlight ? (
+                    <p className="mt-1 text-xs font-medium text-amber-700">
+                      Required — please upload {formatDocLabel(spec.id)}
+                    </p>
+                  ) : null}
                   <p className="mt-0.5 text-xs text-slate-500 sm:hidden">
                     {spec.formats} · {spec.maxSizeMb} MB max
                   </p>

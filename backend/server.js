@@ -75,6 +75,7 @@ function formatClaimResponse(result) {
       missingDocumentTypes: result.missingDocumentTypes || null,
       documents: result.documents || null,
       documentRequirementsResult: result.documentRequirementsResult || null,
+      mismatches: result.mismatches || null,
     };
   }
 

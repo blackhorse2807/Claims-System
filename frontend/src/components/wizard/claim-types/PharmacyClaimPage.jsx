@@ -10,10 +10,18 @@ import DocumentUploadTable from './shared/DocumentUploadTable';
 import InfoCard from './shared/InfoCard';
 import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 
-export default function PharmacyClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [pharmacyName, setPharmacyName] = useState('');
-  const [medicineAmount, setMedicineAmount] = useState('');
-  const [medicineType, setMedicineType] = useState('');
+export default function PharmacyClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [pharmacyName, setPharmacyName] = useState(initialClaimDetails?.pharmacyName || '');
+  const [medicineAmount, setMedicineAmount] = useState(
+    initialClaimDetails?.medicineAmount != null ? String(initialClaimDetails.medicineAmount) : ''
+  );
+  const [medicineType, setMedicineType] = useState(initialClaimDetails?.medicineType || '');
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -175,6 +183,7 @@ export default function PharmacyClaimPage({ applicantSummary, onBack, onContinue
           showErrors={showErrors}
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>

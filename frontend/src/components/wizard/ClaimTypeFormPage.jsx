@@ -67,65 +67,39 @@ export default function ClaimTypeFormPage({
   onBack,
   onChangeType,
   onClaimContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
 }) {
+  const sharedProps = {
+    applicantSummary,
+    onBack,
+    onContinue: onClaimContinue,
+    highlightMissingTypes,
+    initialClaimDetails,
+  };
+
   if (claimType === 'CONSULTATION') {
-    return (
-      <ConsultationClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <ConsultationClaimPage {...sharedProps} />;
   }
 
   if (claimType === 'DIAGNOSTIC') {
-    return (
-      <DiagnosticClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <DiagnosticClaimPage {...sharedProps} />;
   }
 
   if (claimType === 'PHARMACY') {
-    return (
-      <PharmacyClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <PharmacyClaimPage {...sharedProps} />;
   }
 
   if (claimType === 'DENTAL') {
-    return (
-      <DentalClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <DentalClaimPage {...sharedProps} />;
   }
 
   if (claimType === 'VISION') {
-    return (
-      <VisionClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <VisionClaimPage {...sharedProps} />;
   }
 
   if (claimType === 'ALTERNATIVE_MEDICINE') {
-    return (
-      <AlternativeMedicineClaimPage
-        applicantSummary={applicantSummary}
-        onBack={onBack}
-        onContinue={onClaimContinue}
-      />
-    );
+    return <AlternativeMedicineClaimPage {...sharedProps} />;
   }
 
   return (

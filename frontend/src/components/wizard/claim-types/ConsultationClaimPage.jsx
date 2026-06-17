@@ -11,10 +11,22 @@ import DocumentUploadTable from './shared/DocumentUploadTable';
 import InfoCard from './shared/InfoCard';
 import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 
-export default function ConsultationClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [hospitalName, setHospitalName] = useState('');
-  const [consultationAmount, setConsultationAmount] = useState('');
-  const [consultationType, setConsultationType] = useState('');
+export default function ConsultationClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [hospitalName, setHospitalName] = useState(initialClaimDetails?.hospitalName || '');
+  const [consultationAmount, setConsultationAmount] = useState(
+    initialClaimDetails?.consultationAmount != null
+      ? String(initialClaimDetails.consultationAmount)
+      : ''
+  );
+  const [consultationType, setConsultationType] = useState(
+    initialClaimDetails?.consultationType || ''
+  );
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -187,6 +199,7 @@ export default function ConsultationClaimPage({ applicantSummary, onBack, onCont
           showErrors={showErrors}
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>

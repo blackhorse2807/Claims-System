@@ -8,19 +8,10 @@ import ClaimSummaryStep from './wizard/ClaimSummaryStep';
 import { collectApplicantBlockers } from '../utils/collectApplicantBlockers';
 import { buildClaimFormData } from '../utils/buildClaimFormData';
 import { CLAIM_TYPES, todayIsoDate } from '../schemas/claimSchema';
+import { formatDocLabel } from '../data/policyData';
 
-export default function ClaimSubmissionPage({ onSubmit, isSubmitting = false }) {
-  const [wizardStep, setWizardStep] = useState('applicant');
-  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
-  const [submissionBlockers, setSubmissionBlockers] = useState([]);
-  const [dialogTitle, setDialogTitle] = useState('Unable to Continue');
-  const [dialogSubtitle, setDialogSubtitle] = useState(
-    'Please fix the following issues before proceeding.'
-  );
-  const [selectedClaimType, setSelectedClaimType] = useState('');
-  const [claimDetails, setClaimDetails] = useState(null);
-
-  const [applicantData, setApplicantData] = useState({
+export default function ClaimSubmissionPage({ onSubmit, isSubmitting = false, resumeConfig = null }) {
+  const defaultApplicant = {
     memberId: '',
     memberName: '',
     dob: '',
@@ -30,6 +21,22 @@ export default function ClaimSubmissionPage({ onSubmit, isSubmitting = false }) 
     treatmentDate: todayIsoDate(),
     claimSubmissionDate: todayIsoDate(),
     claimType: '',
+  };
+
+  const [wizardStep, setWizardStep] = useState(resumeConfig?.wizardStep || 'applicant');
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [submissionBlockers, setSubmissionBlockers] = useState([]);
+  const [dialogTitle, setDialogTitle] = useState('Unable to Continue');
+  const [dialogSubtitle, setDialogSubtitle] = useState(
+    'Please fix the following issues before proceeding.'
+  );
+  const [selectedClaimType, setSelectedClaimType] = useState(resumeConfig?.selectedClaimType || '');
+  const [claimDetails, setClaimDetails] = useState(resumeConfig?.claimDetails || null);
+  const [highlightMissingTypes] = useState(resumeConfig?.missingDocumentTypes || []);
+
+  const [applicantData, setApplicantData] = useState({
+    ...defaultApplicant,
+    ...(resumeConfig?.applicantData || {}),
   });
 
   function updateApplicantField(field, value) {
@@ -123,7 +130,11 @@ export default function ClaimSubmissionPage({ onSubmit, isSubmitting = false }) 
     const formData = buildClaimFormData(applicantData, claimDetails);
     if (!formData) return;
 
-    await onSubmit(formData);
+    await onSubmit(formData, {
+      applicantData,
+      claimDetails,
+      selectedClaimType,
+    });
   }
 
   const applicantSummary = {
@@ -166,13 +177,24 @@ export default function ClaimSubmissionPage({ onSubmit, isSubmitting = false }) 
       )}
 
       {wizardStep === 'claim-form' && selectedClaimType && (
-        <ClaimTypeFormPage
-          claimType={selectedClaimType}
-          applicantSummary={applicantSummary}
-          onBack={() => setWizardStep('claim-type')}
-          onChangeType={() => setWizardStep('claim-type')}
-          onClaimContinue={handleClaimContinue}
-        />
+        <>
+          {highlightMissingTypes.length > 0 && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <strong>Missing documents:</strong>{' '}
+              {highlightMissingTypes.map(formatDocLabel).join(', ')}. Upload them below, then
+              resubmit your claim.
+            </div>
+          )}
+          <ClaimTypeFormPage
+            claimType={selectedClaimType}
+            applicantSummary={applicantSummary}
+            highlightMissingTypes={highlightMissingTypes}
+            initialClaimDetails={claimDetails}
+            onBack={() => setWizardStep('claim-type')}
+            onChangeType={() => setWizardStep('claim-type')}
+            onClaimContinue={handleClaimContinue}
+          />
+        </>
       )}
 
       {wizardStep === 'claim-summary' && claimDetails && (

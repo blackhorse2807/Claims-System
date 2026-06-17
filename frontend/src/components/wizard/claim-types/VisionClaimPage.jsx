@@ -12,10 +12,18 @@ import DocumentUploadTable from './shared/DocumentUploadTable';
 import InfoCard from './shared/InfoCard';
 import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 
-export default function VisionClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [clinicName, setClinicName] = useState('');
-  const [treatmentAmount, setTreatmentAmount] = useState('');
-  const [treatmentType, setTreatmentType] = useState('');
+export default function VisionClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [clinicName, setClinicName] = useState(initialClaimDetails?.clinicName || '');
+  const [treatmentAmount, setTreatmentAmount] = useState(
+    initialClaimDetails?.treatmentAmount != null ? String(initialClaimDetails.treatmentAmount) : ''
+  );
+  const [treatmentType, setTreatmentType] = useState(initialClaimDetails?.treatmentType || '');
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -198,6 +206,7 @@ export default function VisionClaimPage({ applicantSummary, onBack, onContinue }
           showErrors={showErrors}
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>

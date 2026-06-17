@@ -8,10 +8,17 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [formSnapshot, setFormSnapshot] = useState(null);
+  const [resumeConfig, setResumeConfig] = useState(null);
+  const [formSessionKey, setFormSessionKey] = useState(0);
 
-  async function handleSubmit(formData) {
+  async function handleSubmit(formData, snapshot) {
     setLoading(true);
     setError(null);
+
+    if (snapshot) {
+      setFormSnapshot(snapshot);
+    }
 
     try {
       const response = await fetch(apiUrl('/api/claims'), {
@@ -45,10 +52,43 @@ export default function App() {
     }
   }
 
+  function openFormWithResume(config) {
+    setResumeConfig(config);
+    setFormSessionKey((key) => key + 1);
+    setView('form');
+    setResult(null);
+    setError(null);
+  }
+
+  function handleResumeDocumentUpload() {
+    if (!result) return;
+
+    openFormWithResume({
+      wizardStep: 'claim-form',
+      selectedClaimType:
+        formSnapshot?.selectedClaimType ||
+        result.documentIntelligenceResult?.claim?.claimType ||
+        '',
+      missingDocumentTypes: result.missingDocumentTypes || [],
+      applicantData: formSnapshot?.applicantData,
+      claimDetails: formSnapshot?.claimDetails,
+    });
+  }
+
+  function handleCorrectMemberDetails() {
+    openFormWithResume({
+      wizardStep: 'applicant',
+      applicantData: formSnapshot?.applicantData,
+    });
+  }
+
   function handleReset() {
     setView('form');
     setResult(null);
     setError(null);
+    setResumeConfig(null);
+    setFormSnapshot(null);
+    setFormSessionKey((key) => key + 1);
   }
 
   return (
@@ -84,11 +124,21 @@ export default function App() {
         )}
 
         {!loading && view === 'form' && (
-          <ClaimSubmissionPage onSubmit={handleSubmit} isSubmitting={loading} />
+          <ClaimSubmissionPage
+            key={formSessionKey}
+            onSubmit={handleSubmit}
+            isSubmitting={loading}
+            resumeConfig={resumeConfig}
+          />
         )}
 
         {!loading && view === 'result' && result && (
-          <DecisionView result={result} onReset={handleReset} />
+          <DecisionView
+            result={result}
+            onReset={handleReset}
+            onResumeDocuments={handleResumeDocumentUpload}
+            onCorrectMemberDetails={handleCorrectMemberDetails}
+          />
         )}
       </div>
     </div>

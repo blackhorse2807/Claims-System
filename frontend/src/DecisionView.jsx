@@ -1,9 +1,6 @@
-// DecisionView.jsx
-// Shows the final claim decision with all details
-// Color coded: green = approved, blue = partial, red = rejected, amber = manual review
-
 import { useState } from 'react';
 import TraceView from './TraceView';
+import { formatDocLabel } from './data/policyData';
 
 const DECISION_COLORS = {
   APPROVED: { bg: '#f0fdf4', border: '#86efac', text: '#166534', badge: '#22c55e' },
@@ -22,7 +19,167 @@ const resetButtonStyle = {
   fontSize: '14px',
 };
 
-export default function DecisionView({ result, onReset }) {
+const primaryButtonStyle = {
+  background: '#2563eb',
+  color: 'white',
+  border: 'none',
+  padding: '10px 24px',
+  borderRadius: '8px',
+  cursor: 'pointer',
+  fontSize: '14px',
+  fontWeight: '500',
+};
+
+function BlockedActionPanel({ result, onReset, onResumeDocuments, onCorrectMemberDetails }) {
+  const status = result.status;
+  const isMissingUpload = status === 'PENDING_DOCUMENT_UPLOAD';
+  const isReupload = status === 'PENDING_DOCUMENT_REUPLOAD';
+  const isMemberMismatch = status === 'MEMBER_DETAILS_MISMATCH';
+  const missingTypes = result.missingDocumentTypes || [];
+  const mismatches = result.mismatches || [];
+
+  let guidance = 'Review the issue below and try again.';
+
+  if (isMissingUpload) {
+    guidance =
+      missingTypes.length > 0
+        ? `Upload the missing document(s): ${missingTypes.map(formatDocLabel).join(', ')}. Your other claim details will be kept.`
+        : 'Upload the missing required document(s), then resubmit.';
+  } else if (isReupload) {
+    guidance = 'One or more documents could not be read. Please re-upload clearer copies.';
+  } else if (isMemberMismatch) {
+    guidance =
+      'The member details you entered do not match our policy records. Update your name, date of birth, and gender to match the enrolled member.';
+  }
+
+  return (
+    <div>
+      <div
+        style={{
+          background: '#fff7ed',
+          border: '1px solid #fed7aa',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '16px',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+          <span style={{ fontSize: '24px' }}>{isMemberMismatch ? '🪪' : '⚠️'}</span>
+          <div>
+            <h2 style={{ color: '#9a3412', marginTop: 0, fontSize: '16px' }}>
+              {result.stage
+                ? `${result.stage.replace(/_/g, ' ')} — Action Required`
+                : 'Claim Could Not Be Processed'}
+            </h2>
+            <p style={{ color: '#7c2d12', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
+              {result.message || result.error || 'Claim could not be processed.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {isMemberMismatch && mismatches.length > 0 && (
+        <div
+          style={{
+            border: '1px solid #fecaca',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '16px',
+            background: '#fff1f2',
+          }}
+        >
+          <p style={{ fontWeight: '600', fontSize: '14px', color: '#991b1b', marginTop: 0 }}>
+            Details mismatch
+          </p>
+          <table style={{ width: '100%', fontSize: '13px', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #fecaca', textAlign: 'left' }}>
+                <th style={{ padding: '6px 0' }}>Field</th>
+                <th style={{ padding: '6px 0' }}>You submitted</th>
+                <th style={{ padding: '6px 0' }}>Policy record</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mismatches.map((row) => (
+                <tr key={row.field} style={{ borderBottom: '1px solid #fee2e2' }}>
+                  <td style={{ padding: '8px 0', textTransform: 'capitalize' }}>{row.field}</td>
+                  <td style={{ padding: '8px 8px 8px 0', color: '#991b1b' }}>{row.submitted || '—'}</td>
+                  <td style={{ padding: '8px 0', color: '#166534' }}>{row.expected || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {isMissingUpload && missingTypes.length > 0 && (
+        <div
+          style={{
+            border: '1px solid #fcd34d',
+            borderRadius: '8px',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            background: '#fffbeb',
+            fontSize: '13px',
+            color: '#92400e',
+          }}
+        >
+          <strong>Missing:</strong>{' '}
+          {missingTypes.map((type) => formatDocLabel(type)).join(', ')}
+        </div>
+      )}
+
+      <div
+        style={{
+          background: '#f0fdf4',
+          border: '1px solid #86efac',
+          borderRadius: '8px',
+          padding: '14px 16px',
+          fontSize: '13px',
+          color: '#166534',
+          marginBottom: '16px',
+        }}
+      >
+        <strong>What to do:</strong> {guidance}
+      </div>
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+        {isMissingUpload && onResumeDocuments && (
+          <button type="button" onClick={onResumeDocuments} style={primaryButtonStyle}>
+            Upload Missing Document →
+          </button>
+        )}
+        {isReupload && onResumeDocuments && (
+          <button type="button" onClick={onResumeDocuments} style={primaryButtonStyle}>
+            Re-upload Documents →
+          </button>
+        )}
+        {isMemberMismatch && onCorrectMemberDetails && (
+          <button type="button" onClick={onCorrectMemberDetails} style={primaryButtonStyle}>
+            Correct Member Details →
+          </button>
+        )}
+        {!isMissingUpload && !isReupload && !isMemberMismatch && (
+          <button type="button" onClick={onReset} style={primaryButtonStyle}>
+            Try Again →
+          </button>
+        )}
+        {(isMissingUpload || isReupload || isMemberMismatch) && (
+          <button type="button" onClick={onReset} style={resetButtonStyle}>
+            Start Over
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function DecisionView({
+  result,
+  onReset,
+  onResumeDocuments,
+  onCorrectMemberDetails,
+}) {
   const [showTrace, setShowTrace] = useState(false);
 
   const decisionKey =
@@ -33,61 +190,20 @@ export default function DecisionView({ result, onReset }) {
   const claimedAmount = result.claimed_amount ?? result.claimedAmount ?? 0;
   const patientPayable = result.patient_payable ?? result.patientPayable;
 
-  // If claim was blocked before a final decision
-  if (result.blocked) {
+  const isActionRequired =
+    result.blocked ||
+    result.status === 'PENDING_DOCUMENT_UPLOAD' ||
+    result.status === 'PENDING_DOCUMENT_REUPLOAD' ||
+    result.status === 'MEMBER_DETAILS_MISMATCH';
+
+  if (isActionRequired && !result.decision) {
     return (
-      <div>
-        <div
-          style={{
-            background: '#fff7ed',
-            border: '1px solid #fed7aa',
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-            <span style={{ fontSize: '24px' }}>⚠️</span>
-            <div>
-              <h2 style={{ color: '#9a3412', marginTop: 0, fontSize: '16px' }}>
-                {result.stage ? `${result.stage.replace(/_/g, ' ')} — Action Required` : 'Claim Could Not Be Processed'}
-              </h2>
-              <p style={{ color: '#7c2d12', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-                {result.message || result.error || 'Claim could not be processed.'}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div
-          style={{
-            background: '#f0fdf4',
-            border: '1px solid #86efac',
-            borderRadius: '8px',
-            padding: '14px 16px',
-            fontSize: '13px',
-            color: '#166534',
-            marginBottom: '16px',
-          }}
-        >
-          <strong>What to do:</strong> Click &quot;Try Again&quot; below, use the &quot;+ Add
-          Document&quot; button to upload the missing document, then resubmit.
-        </div>
-        <button
-          onClick={onReset}
-          style={{
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            padding: '10px 24px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '500',
-          }}
-        >
-          Try Again →
-        </button>
-      </div>
+      <BlockedActionPanel
+        result={result}
+        onReset={onReset}
+        onResumeDocuments={onResumeDocuments}
+        onCorrectMemberDetails={onCorrectMemberDetails}
+      />
     );
   }
 

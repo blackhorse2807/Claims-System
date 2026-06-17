@@ -11,11 +11,21 @@ import DocumentUploadTable from './shared/DocumentUploadTable';
 import InfoCard from './shared/InfoCard';
 import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 
-export default function AlternativeMedicineClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [clinicName, setClinicName] = useState('');
-  const [treatmentAmount, setTreatmentAmount] = useState('');
-  const [medicineSystem, setMedicineSystem] = useState('');
-  const [practitionerName, setPractitionerName] = useState('');
+export default function AlternativeMedicineClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [clinicName, setClinicName] = useState(initialClaimDetails?.clinicName || '');
+  const [treatmentAmount, setTreatmentAmount] = useState(
+    initialClaimDetails?.treatmentAmount != null ? String(initialClaimDetails.treatmentAmount) : ''
+  );
+  const [medicineSystem, setMedicineSystem] = useState(initialClaimDetails?.medicineSystem || '');
+  const [practitionerName, setPractitionerName] = useState(
+    initialClaimDetails?.practitionerName || ''
+  );
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -227,6 +237,7 @@ export default function AlternativeMedicineClaimPage({ applicantSummary, onBack,
           showErrors={showErrors}
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>

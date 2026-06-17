@@ -16,10 +16,18 @@ import { FieldError, inputClass, labelClass } from './shared/claimFormStyles';
 const ALL_DENTAL_SPECS = [...DENTAL_REQUIRED_DOCUMENT_SPECS, ...DENTAL_OPTIONAL_DOCUMENT_SPECS];
 const REQUIRED_DOC_IDS = DENTAL_REQUIRED_DOCUMENT_SPECS.map((s) => s.id);
 
-export default function DentalClaimPage({ applicantSummary, onBack, onContinue }) {
-  const [clinicName, setClinicName] = useState('');
-  const [treatmentAmount, setTreatmentAmount] = useState('');
-  const [procedureType, setProcedureType] = useState('');
+export default function DentalClaimPage({
+  applicantSummary,
+  onBack,
+  onContinue,
+  highlightMissingTypes = [],
+  initialClaimDetails = null,
+}) {
+  const [clinicName, setClinicName] = useState(initialClaimDetails?.clinicName || '');
+  const [treatmentAmount, setTreatmentAmount] = useState(
+    initialClaimDetails?.treatmentAmount != null ? String(initialClaimDetails.treatmentAmount) : ''
+  );
+  const [procedureType, setProcedureType] = useState(initialClaimDetails?.procedureType || '');
   const [uploads, setUploads] = useState({});
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -229,6 +237,7 @@ export default function DentalClaimPage({ applicantSummary, onBack, onContinue }
           fileInputRefs={fileInputRefs}
           onFileSelect={handleFileSelect}
           requiredIds={REQUIRED_DOC_IDS}
+          highlightMissingIds={highlightMissingTypes}
         />
       </InfoCard>
     </ClaimPageLayout>
