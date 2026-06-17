@@ -1,8 +1,8 @@
 # Eval Report — Health Insurance Claims Pipeline
 
-**Generated:** 2026-06-17T10:09:47.988Z
+**Generated:** 2026-06-17T13:57:09.138Z
 **Total Tests:** 12
-**Passed:** 12 | **Failed:** 0
+**Passed:** 0 | **Failed:** 12
 
 ---
 
@@ -10,18 +10,18 @@
 
 | Test ID | Description | Expected | Actual | Result |
 |---------|-------------|----------|--------|--------|
-| TC001 | Member submits two prescriptions for a consultatio | BLOCKED | BLOCKED | ✅ PASS |
-| TC002 | Member uploads a valid prescription but a blurry,  | BLOCKED | BLOCKED | ✅ PASS |
-| TC003 | The prescription is for Rajesh Kumar but the hospi | BLOCKED | BLOCKED | ✅ PASS |
-| TC004 | Complete, valid consultation claim with correct do | APPROVED | APPROVED | ✅ PASS |
-| TC005 | Member joined 2024-09-01. Claims for diabetes trea | REJECTED | REJECTED | ✅ PASS |
-| TC006 | Bill includes root canal treatment (covered) and t | PARTIAL | PARTIAL | ✅ PASS |
-| TC007 | MRI scan costing ₹15,000 submitted without pre-aut | REJECTED | REJECTED | ✅ PASS |
-| TC008 | Claimed amount of ₹7,500 exceeds the per-claim lim | REJECTED | REJECTED | ✅ PASS |
-| TC009 | Member EMP008 has already submitted 3 claims today | MANUAL_REVIEW | MANUAL_REVIEW | ✅ PASS |
-| TC010 | Valid claim at Apollo Hospitals, a network hospita | APPROVED | APPROVED | ✅ PASS |
-| TC011 | One component of your system fails mid-processing  | APPROVED | APPROVED | ✅ PASS |
-| TC012 | Member claims for bariatric consultation and a die | REJECTED | REJECTED | ✅ PASS |
+| TC001 | Member submits two prescriptions for a consultatio | BLOCKED | ERROR | ❌ FAIL |
+| TC002 | Member uploads a valid prescription but a blurry,  | BLOCKED | ERROR | ❌ FAIL |
+| TC003 | The prescription is for Rajesh Kumar but the hospi | BLOCKED | ERROR | ❌ FAIL |
+| TC004 | Complete, valid consultation claim with correct do | APPROVED | ERROR | ❌ FAIL |
+| TC005 | Member joined 2024-09-01. Claims for diabetes trea | REJECTED | ERROR | ❌ FAIL |
+| TC006 | Bill includes root canal treatment (covered) and t | PARTIAL | ERROR | ❌ FAIL |
+| TC007 | MRI scan costing ₹15,000 submitted without pre-aut | REJECTED | ERROR | ❌ FAIL |
+| TC008 | Claimed amount of ₹7,500 exceeds the per-claim lim | REJECTED | ERROR | ❌ FAIL |
+| TC009 | Member EMP008 has already submitted 3 claims today | MANUAL_REVIEW | ERROR | ❌ FAIL |
+| TC010 | Valid claim at Apollo Hospitals, a network hospita | APPROVED | ERROR | ❌ FAIL |
+| TC011 | One component of your system fails mid-processing  | APPROVED | ERROR | ❌ FAIL |
+| TC012 | Member claims for bariatric consultation and a die | REJECTED | ERROR | ❌ FAIL |
 
 ---
 
@@ -29,7 +29,7 @@
 
 ### TC001 — Member submits two prescriptions for a consultation claim that requires a prescription and a hospital bill.
 
-**Result:** ✅ PASS (77ms)
+**Result:** ❌ FAIL (379ms)
 
 **Expected:**
 ```json
@@ -45,13 +45,16 @@
 }
 ```
 
-**Actual decision:** WRONG_DOCUMENT_TYPE
+**Actual decision:** ERROR
+
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC002 — Member uploads a valid prescription but a blurry, unreadable photo of their pharmacy bill.
 
-**Result:** ✅ PASS (6ms)
+**Result:** ❌ FAIL (9ms)
 
 **Expected:**
 ```json
@@ -67,13 +70,16 @@
 }
 ```
 
-**Actual decision:** UNREADABLE_DOCUMENT
+**Actual decision:** ERROR
+
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC003 — The prescription is for Rajesh Kumar but the hospital bill is for a different patient, Arjun Mehta.
 
-**Result:** ✅ PASS (7ms)
+**Result:** ❌ FAIL (22ms)
 
 **Expected:**
 ```json
@@ -89,13 +95,16 @@
 }
 ```
 
-**Actual decision:** PATIENT_MISMATCH
+**Actual decision:** ERROR
+
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC004 — Complete, valid consultation claim with correct documents, valid member, covered treatment, within all limits.
 
-**Result:** ✅ PASS (11ms)
+**Result:** ❌ FAIL (6ms)
 
 **Expected:**
 ```json
@@ -107,20 +116,16 @@
 }
 ```
 
-**Actual decision:** APPROVED
-**Actual amount:** ₹1350
-**Confidence:** 92%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC005 — Member joined 2024-09-01. Claims for diabetes treatment on 2024-10-15, which is within the 90-day waiting period for diabetes.
 
-**Result:** ✅ PASS (8ms)
+**Result:** ❌ FAIL (5ms)
 
 **Expected:**
 ```json
@@ -136,21 +141,16 @@
 }
 ```
 
-**Actual decision:** REJECTED
-**Actual amount:** ₹0
-**Confidence:** 95%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✗ eligibility
-  - Diabetes has 90-day waiting period. Member eligible from 2024-11-30
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC006 — Bill includes root canal treatment (covered) and teeth whitening (cosmetic, excluded). System must approve only the covered procedure.
 
-**Result:** ✅ PASS (5ms)
+**Result:** ❌ FAIL (6ms)
 
 **Expected:**
 ```json
@@ -164,20 +164,16 @@
 }
 ```
 
-**Actual decision:** PARTIAL
-**Actual amount:** ₹8000
-**Confidence:** 90%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC007 — MRI scan costing ₹15,000 submitted without pre-authorization. Policy requires pre-auth for MRI above ₹10,000.
 
-**Result:** ✅ PASS (8ms)
+**Result:** ❌ FAIL (6ms)
 
 **Expected:**
 ```json
@@ -194,21 +190,16 @@
 }
 ```
 
-**Actual decision:** REJECTED
-**Actual amount:** ₹0
-**Confidence:** 95%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✗ adjudicator
-  - Pre-authorization required for MRI/CT Scan/PET Scan when claim exceeds ₹10000
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC008 — Claimed amount of ₹7,500 exceeds the per-claim limit of ₹5,000.
 
-**Result:** ✅ PASS (7ms)
+**Result:** ❌ FAIL (8ms)
 
 **Expected:**
 ```json
@@ -224,21 +215,16 @@
 }
 ```
 
-**Actual decision:** REJECTED
-**Actual amount:** ₹0
-**Confidence:** 95%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✗ eligibility
-  - Claimed ₹7500 exceeds per-claim limit of ₹5000
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC009 — Member EMP008 has already submitted 3 claims today before this one arrives. This is the 4th claim from the same member on the same day.
 
-**Result:** ✅ PASS (10ms)
+**Result:** ❌ FAIL (8ms)
 
 **Expected:**
 ```json
@@ -252,20 +238,16 @@
 }
 ```
 
-**Actual decision:** MANUAL_REVIEW
-**Actual amount:** ₹4320
-**Confidence:** 70%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC010 — Valid claim at Apollo Hospitals, a network hospital. Network discount must be applied before co-pay.
 
-**Result:** ✅ PASS (8ms)
+**Result:** ❌ FAIL (6ms)
 
 **Expected:**
 ```json
@@ -280,20 +262,16 @@
 }
 ```
 
-**Actual decision:** APPROVED
-**Actual amount:** ₹3240
-**Confidence:** 92%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC011 — One component of your system fails mid-processing (simulate with the flag below). The overall pipeline must continue, produce a decision, and make the failure visible in the output with an appropriately reduced confidence score.
 
-**Result:** ✅ PASS (7ms)
+**Result:** ❌ FAIL (6ms)
 
 **Expected:**
 ```json
@@ -308,20 +286,16 @@
 }
 ```
 
-**Actual decision:** APPROVED
-**Actual amount:** ₹4000
-**Confidence:** 77%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✓ adjudicator
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---
 
 ### TC012 — Member claims for bariatric consultation and a diet program. Obesity treatment is explicitly excluded under the policy.
 
-**Result:** ✅ PASS (5ms)
+**Result:** ❌ FAIL (4ms)
 
 **Expected:**
 ```json
@@ -335,14 +309,9 @@
 }
 ```
 
-**Actual decision:** REJECTED
-**Actual amount:** ₹0
-**Confidence:** 95%
+**Actual decision:** ERROR
 
-**Agent trace summary:**
-- ✓ eligibility
-- ✗ adjudicator
-  - Claim rejected — "Obesity and weight loss programs" is excluded by policy
-- ✓ fraudDetector
+**Why it failed:**
+- fetch failed
 
 ---

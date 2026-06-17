@@ -8,6 +8,7 @@ import TraceView from './TraceView';
 const DECISION_COLORS = {
   APPROVED: { bg: '#f0fdf4', border: '#86efac', text: '#166534', badge: '#22c55e' },
   PARTIAL: { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af', badge: '#3b82f6' },
+  PARTIAL_APPROVED: { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af', badge: '#3b82f6' },
   REJECTED: { bg: '#fff1f2', border: '#fca5a5', text: '#991b1b', badge: '#ef4444' },
   MANUAL_REVIEW: { bg: '#fffbeb', border: '#fcd34d', text: '#92400e', badge: '#f59e0b' },
 };
@@ -24,7 +25,15 @@ const resetButtonStyle = {
 export default function DecisionView({ result, onReset }) {
   const [showTrace, setShowTrace] = useState(false);
 
-  // If claim was blocked at document verification stage
+  const decisionKey =
+    result.decision === 'PARTIAL_APPROVED' ? 'PARTIAL' : result.decision;
+  const claimId = result.claim_id || result.claimId;
+  const confidence = result.confidence_score ?? result.confidence ?? 0;
+  const approvedAmount = result.approved_amount ?? result.approvedAmount ?? 0;
+  const claimedAmount = result.claimed_amount ?? result.claimedAmount ?? 0;
+  const patientPayable = result.patient_payable ?? result.patientPayable;
+
+  // If claim was blocked before a final decision
   if (result.blocked) {
     return (
       <div>
@@ -41,10 +50,10 @@ export default function DecisionView({ result, onReset }) {
             <span style={{ fontSize: '24px' }}>⚠️</span>
             <div>
               <h2 style={{ color: '#9a3412', marginTop: 0, fontSize: '16px' }}>
-                Document Issue — Action Required
+                {result.stage ? `${result.stage.replace(/_/g, ' ')} — Action Required` : 'Claim Could Not Be Processed'}
               </h2>
               <p style={{ color: '#7c2d12', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-                {result.message}
+                {result.message || result.error || 'Claim could not be processed.'}
               </p>
             </div>
           </div>
@@ -82,7 +91,7 @@ export default function DecisionView({ result, onReset }) {
     );
   }
 
-  const colors = DECISION_COLORS[result.decision] || DECISION_COLORS.MANUAL_REVIEW;
+  const colors = DECISION_COLORS[decisionKey] || DECISION_COLORS.MANUAL_REVIEW;
 
   return (
     <div>
@@ -114,10 +123,10 @@ export default function DecisionView({ result, onReset }) {
                 fontWeight: '600',
               }}
             >
-              {result.decision}
+              {decisionKey}
             </span>
             <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>
-              Claim ID: {result.claim_id}
+              Claim ID: {claimId}
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -130,7 +139,7 @@ export default function DecisionView({ result, onReset }) {
                 margin: 0,
               }}
             >
-              {Math.round(result.confidence_score * 100)}%
+              {Math.round(confidence * 100)}%
             </p>
           </div>
         </div>
@@ -153,16 +162,31 @@ export default function DecisionView({ result, onReset }) {
                 margin: 0,
               }}
             >
-              ₹{result.approved_amount?.toLocaleString('en-IN') || 0}
+              ₹{approvedAmount.toLocaleString('en-IN')}
             </p>
           </div>
           <div style={{ background: 'white', borderRadius: '8px', padding: '16px' }}>
             <p style={{ fontSize: '12px', color: '#888', margin: '0 0 4px' }}>Claimed Amount</p>
             <p style={{ fontSize: '26px', fontWeight: '700', color: '#374151', margin: 0 }}>
-              ₹{result.claimed_amount?.toLocaleString('en-IN') || 0}
+              ₹{claimedAmount.toLocaleString('en-IN')}
             </p>
           </div>
         </div>
+
+        {patientPayable > 0 && (
+          <div style={{ background: 'white', borderRadius: '8px', padding: '16px', marginBottom: '16px' }}>
+            <p style={{ fontSize: '12px', color: '#888', margin: '0 0 4px' }}>Patient Payable</p>
+            <p style={{ fontSize: '20px', fontWeight: '600', color: '#374151', margin: 0 }}>
+              ₹{patientPayable.toLocaleString('en-IN')}
+            </p>
+          </div>
+        )}
+
+        {result.risk_level && (
+          <p style={{ fontSize: '13px', color: colors.text, marginBottom: '16px' }}>
+            Risk level: <strong>{result.risk_level || result.riskLevel}</strong>
+          </p>
+        )}
 
         {result.reasons && result.reasons.length > 0 && (
           <div style={{ marginBottom: '16px' }}>

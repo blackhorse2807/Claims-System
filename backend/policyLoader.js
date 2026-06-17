@@ -14,6 +14,10 @@ function loadPolicy() {
   return cachedPolicy;
 }
 
+function clearPolicyCache() {
+  cachedPolicy = null;
+}
+
 function getPolicy() {
   return loadPolicy();
 }
@@ -99,9 +103,22 @@ function getFraudThresholds() {
   return policy.fraud_thresholds || {};
 }
 
+function getAllMembers() {
+  const policy = loadPolicy();
+  return (policy.members || []).map((member) => ({
+    memberId: member.member_id || member.id,
+    name: member.name,
+    relationship: member.relationship || 'SELF',
+    primaryMemberId: member.primary_member_id || null,
+    joinDate: member.join_date || null,
+  }));
+}
+
 module.exports = {
   getPolicy,
+  clearPolicyCache,
   getMember,
+  getAllMembers,
   getCoverageCategory,
   getWaitingPeriod,
   isNetworkHospital,

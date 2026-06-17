@@ -1,10 +1,6 @@
-// App.jsx
-// Controls what the user sees: claim form, decision result, or test runner
-
 import { useState } from 'react';
-import ClaimForm from './ClaimForm';
+import ClaimSubmissionPage from './components/ClaimSubmissionPage';
 import DecisionView from './DecisionView';
-import TestRunner from './TestRunner';
 import { apiUrl } from './config';
 
 export default function App() {
@@ -23,11 +19,27 @@ export default function App() {
         body: formData,
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+
+      if (!response.ok) {
+        if (data.blocked || data.error || data.message) {
+          setResult({ blocked: true, ...data });
+          setView('result');
+          return;
+        }
+
+        throw new Error(data.message || data.error || 'Claim submission failed');
+      }
+
       setResult(data);
       setView('result');
     } catch (err) {
-      setError('Could not connect to the claims server. Please try again in a moment.');
+      setError(err.message || 'Could not connect to the claims server. Please try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -39,93 +51,46 @@ export default function App() {
     setError(null);
   }
 
-  const navButtonStyle = (active) => ({
-    padding: '6px 16px',
-    borderRadius: '6px',
-    fontSize: '13px',
-    cursor: 'pointer',
-    background: active ? '#2563eb' : 'none',
-    color: active ? 'white' : '#374151',
-    border: active ? 'none' : '1px solid #d1d5db',
-  });
-
   return (
-    <div style={{ maxWidth: '860px', margin: '0 auto', padding: '24px', fontFamily: 'sans-serif' }}>
-      <div
-        style={{
-          borderBottom: '1px solid #e5e7eb',
-          paddingBottom: '20px',
-          marginBottom: '28px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '20px', margin: 0, fontWeight: '600' }}>
-            Claims Processing Portal
-          </h1>
-          <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: '13px' }}>
-            Plum Group Health Insurance — PLUM_GHI_2024
-          </p>
-        </div>
-        
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 flex flex-col gap-4 border-b border-slate-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">Claims Processing Portal</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Plum Group Health Insurance — PLUM_GHI_2024
+            </p>
+          </div>
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Live
+          </span>
+        </header>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {loading && (
+          <div className="rounded-xl border border-slate-200 bg-white py-16 text-center shadow-sm">
+            <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-[3px] border-slate-200 border-t-blue-600" />
+            <p className="text-sm font-medium text-slate-600">Processing your claim…</p>
+            <p className="mt-1 text-xs text-slate-400">
+              Verifying documents and checking policy rules
+            </p>
+          </div>
+        )}
+
+        {!loading && view === 'form' && (
+          <ClaimSubmissionPage onSubmit={handleSubmit} isSubmitting={loading} />
+        )}
+
+        {!loading && view === 'result' && result && (
+          <DecisionView result={result} onReset={handleReset} />
+        )}
       </div>
-
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
-        <button onClick={() => setView('form')} style={navButtonStyle(view === 'form')}>
-          Submit Claim
-        </button>
-        <button onClick={() => setView('tests')} style={navButtonStyle(view === 'tests')}>
-          Run Test Cases
-        </button>
-      </div>
-
-      {error && (
-        <div
-          style={{
-            background: '#fff0f0',
-            border: '1px solid #ffcccc',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            color: '#cc0000',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {loading && (
-        <div style={{ textAlign: 'center', padding: '60px 40px' }}>
-          <div
-            style={{
-              width: '36px',
-              height: '36px',
-              border: '3px solid #e5e7eb',
-              borderTop: '3px solid #2563eb',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-              margin: '0 auto 16px',
-            }}
-          />
-          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
-            Processing your claim...
-          </p>
-          <p style={{ color: '#9ca3af', fontSize: '12px', margin: '4px 0 0' }}>
-            Verifying documents and checking policy rules
-          </p>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
-      )}
-
-      {!loading && view === 'form' && <ClaimForm onSubmit={handleSubmit} />}
-
-      {!loading && view === 'result' && result && (
-        <DecisionView result={result} onReset={handleReset} />
-      )}
-
-      {!loading && view === 'tests' && <TestRunner onBack={() => setView('form')} />}
     </div>
   );
 }

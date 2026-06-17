@@ -1,10 +1,74 @@
-// TraceView.jsx
-// Displays the detailed trace from each agent
-// This is the "explainability" panel — shows exactly what each agent checked and why
+// TraceView.jsx — displays the pipeline trace from each processing step.
+
+function isPipelineTraceEntry(entry) {
+  return Boolean(entry?.step && entry?.status);
+}
+
+function statusColor(status) {
+  if (status === 'PASS') return { bg: '#dcfce7', text: '#166534' };
+  if (status === 'WARNING') return { bg: '#fef3c7', text: '#92400e' };
+  return { bg: '#fee2e2', text: '#991b1b' };
+}
 
 export default function TraceView({ trace }) {
   if (!trace || trace.length === 0) {
     return <p style={{ color: '#888', fontSize: '14px' }}>No trace data available.</p>;
+  }
+
+  if (isPipelineTraceEntry(trace[0])) {
+    return (
+      <div
+        style={{
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '20px',
+        }}
+      >
+        <h3 style={{ fontSize: '15px', marginTop: 0, marginBottom: '16px' }}>Pipeline Trace Log</h3>
+
+        {trace.map((entry, index) => {
+          const colors = statusColor(entry.status);
+          return (
+            <div
+              key={`${entry.step}-${index}`}
+              style={{
+                display: 'flex',
+                gap: '12px',
+                marginBottom: '12px',
+                paddingBottom: '12px',
+                borderBottom: index < trace.length - 1 ? '1px solid #f3f4f6' : 'none',
+                fontSize: '13px',
+              }}
+            >
+              <span
+                style={{
+                  background: colors.bg,
+                  color: colors.text,
+                  padding: '2px 10px',
+                  borderRadius: '12px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  flexShrink: 0,
+                  height: 'fit-content',
+                }}
+              >
+                {entry.status}
+              </span>
+              <div>
+                <p style={{ margin: 0, fontWeight: '600', color: '#111827' }}>{entry.step}</p>
+                <p style={{ margin: '4px 0 0', color: '#6b7280' }}>{entry.message}</p>
+                {entry.timestamp && (
+                  <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '12px' }}>
+                    {entry.timestamp}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
   }
 
   return (

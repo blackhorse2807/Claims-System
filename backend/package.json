@@ -6,7 +6,15 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node testRunner.js"
+    "test": "node agents/claimIntake.test.js && node agents/memberValidationAgent.test.js && node services/anthropicService.test.js && node services/documentClassifier.test.js && node services/documentExtractor.test.js && node services/qualityAnalyzer.test.js && node agents/documentIntelligenceAgent.test.js && node agents/coveragePolicyAgent.test.js && node agents/financialAdjudicationAgent.test.js && node agents/fraudRiskAgent.test.js && node agents/decisionAgent.test.js && node services/claimProcessingOrchestrator.test.js && node testRunner.js",
+    "test:intake": "node agents/claimIntake.test.js",
+    "test:member": "node agents/memberValidationAgent.test.js",
+    "test:coverage": "node agents/coveragePolicyAgent.test.js",
+    "test:financial": "node agents/financialAdjudicationAgent.test.js",
+    "test:fraud": "node agents/fraudRiskAgent.test.js",
+    "test:decision": "node agents/decisionAgent.test.js",
+    "test:orchestrator": "node services/claimProcessingOrchestrator.test.js",
+    "test:document-intelligence": "node services/anthropicService.test.js && node services/documentClassifier.test.js && node services/documentExtractor.test.js && node services/qualityAnalyzer.test.js && node agents/documentIntelligenceAgent.test.js",
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
