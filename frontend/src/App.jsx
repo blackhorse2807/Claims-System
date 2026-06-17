@@ -68,19 +68,7 @@ export default function App() {
             Plum Group Health Insurance — PLUM_GHI_2024
           </p>
         </div>
-        <div
-          style={{
-            background: '#f0fdf4',
-            border: '1px solid #86efac',
-            borderRadius: '6px',
-            padding: '4px 10px',
-            fontSize: '12px',
-            color: '#166534',
-            fontWeight: '500',
-          }}
-        >
-          ● Live
-        </div>
+        
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '28px' }}>
